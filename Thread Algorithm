@@ -1,0 +1,57 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+#define MAX_THREADS 5
+#define TIME_QUANTUM 3
+
+typedef struct {
+    int id;
+    int burst_time;
+} process_t;
+
+void *round_robin(void *arg) {
+    process_t *process = (process_t *)arg;
+    int remaining_time = process->burst_time;
+
+    while (remaining_time > 0) {
+        printf("Process %d is running for %d time units\n", process->id, TIME_QUANTUM);
+        remaining_time -= TIME_QUANTUM;
+
+        if (remaining_time > 0) {
+            printf("Process %d is preempted\n", process->id);
+            pthread_self();
+        }
+    }
+
+    printf("Process %d has completed\n", process->id);
+    pthread_exit(NULL);
+}
+
+int main() {
+    process_t processes[MAX_THREADS] = {
+        {1, 10},
+        {2, 5},
+        {3, 8},
+        {4, 12},
+        {5, 4}
+    };
+
+    pthread_t threads[MAX_THREADS];
+    int rc;
+
+    for (int i = 0; i < MAX_THREADS; i++) {
+        rc = pthread_create(&threads[i], NULL, round_robin, (void *)&processes[i]);
+
+        if (rc) {
+            printf("ERROR: return code from pthread_create() is %d\n", rc);
+            exit(-1);
+        }
+    }
+
+    for (int i = 0; i < MAX_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    return 0;
+}
